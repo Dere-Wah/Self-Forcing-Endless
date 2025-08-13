@@ -74,7 +74,7 @@ python server.py
 
 ## New Additions
 
-We added several features and refactors to make the demo more powerful and
+I added several features and refactors to make the demo more powerful and
 interactive, inspired by real-time experimentation and explained in detail in
 the blog post:
 [Self-Forcing: Making AI Video Generation Endless](https://derewah.dev/projects/self-forcing-endless).
