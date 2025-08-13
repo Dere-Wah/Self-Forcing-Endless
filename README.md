@@ -85,36 +85,29 @@ the blog post:
     now rolls forward block-by-block using a noise buffer and a rolling KV
     cache, rather than stopping after a fixed number of frames (the blog post
     discusses the historical 81-frame limit and how to go beyond it).
--   **How**: The generator pre-allocates a large noise buffer and advances using
+-   **How**: The generator advances using
     a moving start index while maintaining an internal KV cache window. Decoding
     happens per block, and frames are streamed out as they are produced.
 -   **Where**: Implemented in
     `SelfForcingEndlessGenerator.endless_generation_task` inside
     `self_forcing.py`.
 
-### Predictable Cache Purge with Strength Control
+### Cache Purge with Strength Control
 
--   **What**: You can reset the model’s generation memory mid-stream to recover
-    from drift/degradation or to react more strongly to prompt changes.
--   **Why**: Purging the cache clears accumulated artifacts in the model’s
-    generation cache, trading off some temporal continuity for
-    quality/reactivity.
--   **Synchronized purge**: The purge is aligned with the denoising step to make
-    results predictable.
 -   **Strength parameter**: `purge_strength` is an integer in `[0, 3]` that
     controls when in the denoising cycle the purge is applied (earlier =
     stronger reset).
-    -   `0` = earliest step (strongest change, most reactive)
-    -   `1` = early-mid
-    -   `2` = late-mid
-    -   `3` = latest step (subtle change, most continuity)
+    -   `strength 3` = earliest step (step 0) (strongest change, most reactive)
+    -   `strength 2` = early-mid (step 1)
+    -   `strength 1` = late-mid (step 2)
+    -   `strength 0` = latest step (step 3) (subtle change, most continuity)
 -   **Where**: Use `SelfForcingEndlessGenerator.purge_cache(purge_strength)` or
     the Socket.IO event `purge_cache` with a `purge_strength` payload.
     Internally, see `_denoise_frame` in `self_forcing.py`.
 
 ### Flicker Reduction via VAE Memory Handling
 
--   **What**: During continuous generation, the VAE’s decoding cache is managed
+-   **What**: During continuous generation, the VAE’s decoding cache is maintained
     to preserve consistency across blocks, minimizing periodic flicker described
     in the blog.
 -   **Where**: VAE decode/cache handling in `_decode_block` within
