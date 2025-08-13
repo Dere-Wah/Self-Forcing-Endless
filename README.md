@@ -28,7 +28,7 @@ the quality of state-of-the-art diffusion models.
 
 ---
 
-https://github.com/user-attachments/assets/7548c2db-fe03-4ba8-8dd3-52d2c6160739
+https://derewah.dev/assets/blog/self-forcing-endless/11.mp4
 
 ## Requirements
 
