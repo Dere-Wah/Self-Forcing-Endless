@@ -33,7 +33,7 @@ the quality of state-of-the-art diffusion models.
 
 ---
 
-https://github.com/user-attachments/assets/0392bf33-db45-49ca-b875-b773f8c19480
+https://github.com/user-attachments/assets/c76977b1-dcd2-4bc7-a0d6-35d735af86a2
 
 ## Requirements
 
