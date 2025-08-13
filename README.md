@@ -18,6 +18,11 @@
   <h3 align="center"><a href="https://arxiv.org/abs/2506.08009">Paper</a> | <a href="https://self-forcing.github.io">Website</a> | <a href="https://huggingface.co/gdhe17/Self-Forcing/tree/main">Models (HuggingFace)</a></h3>
 </p>
 
+<p align="center"><i>
+This repository extends the paper's implementation with new demo features (endless generation, synchronized cache purge strength, and a generator class refactor). For a practical overview and motivation, see my blog post:
+<a href="https://derewah.dev/projects/self-forcing-endless">Self-Forcing: Making AI Video Generation Endless</a>.
+</i></p>
+
 ---
 
 Self Forcing trains autoregressive video diffusion models by **simulating the
@@ -67,38 +72,79 @@ huggingface-cli download gdhe17/Self-Forcing checkpoints/self_forcing_dmd.pt --l
 python server.py
 ```
 
-Note:
+## New Additions
 
--   **Our model works better with long, detailed prompts** since it's trained
-    with such prompts. We will integrate prompt extension into the codebase
-    (similar to
-    [Wan2.1](https://github.com/Wan-Video/Wan2.1/tree/main?tab=readme-ov-file#2-using-prompt-extention))
-    in the future. For now, it is recommended to use third-party LLMs (such as
-    GPT-4o) to extend your prompt before providing to the model.
--   You may want to adjust FPS so it plays smoothly on your device.
--   The speed can be improved by enabling `torch.compile`,
-    [TAEHV-VAE](https://github.com/madebyollin/taehv/), or using FP8 Linear
-    layers, although the latter two options may sacrifice quality. It is
-    recommended to use `torch.compile` if possible and enable TAEHV-VAE if
-    further speedup is needed.
+We added several features and refactors to make the demo more powerful and
+interactive, inspired by real-time experimentation and explained in detail in
+the blog post:
+[Self-Forcing: Making AI Video Generation Endless](https://derewah.dev/projects/self-forcing-endless).
 
-### CLI Inference
+### Endless Generation
 
-Example inference script using the chunk-wise autoregressive checkpoint trained
-with DMD:
+-   **What**: Continuous, theoretically unbounded video generation. The model
+    now rolls forward block-by-block using a noise buffer and a rolling KV
+    cache, rather than stopping after a fixed number of frames (the blog post
+    discusses the historical 81-frame limit and how to go beyond it).
+-   **How**: The generator pre-allocates a large noise buffer and advances using
+    a moving start index while maintaining an internal KV cache window. Decoding
+    happens per block, and frames are streamed out as they are produced.
+-   **Where**: Implemented in
+    `SelfForcingEndlessGenerator.endless_generation_task` inside
+    `self_forcing.py`.
 
-```
-python inference.py \
-    --config_path configs/self_forcing_dmd.yaml \
-    --output_folder videos/self_forcing_dmd \
-    --checkpoint_path checkpoints/self_forcing_dmd.pt \
-    --data_path prompts/MovieGenVideoBench_extended.txt \
-    --use_ema
-```
+### Predictable Cache Purge with Strength Control
 
-Other config files and corresponding checkpoints can be found in
-[configs](configs) folder and our
-[huggingface repo](https://huggingface.co/gdhe17/Self-Forcing/tree/main/checkpoints).
+-   **What**: You can reset the model’s generation memory mid-stream to recover
+    from drift/degradation or to react more strongly to prompt changes.
+-   **Why**: Purging the cache clears accumulated artifacts in the model’s
+    generation cache, trading off some temporal continuity for
+    quality/reactivity.
+-   **Synchronized purge**: The purge is aligned with the denoising step to make
+    results predictable.
+-   **Strength parameter**: `purge_strength` is an integer in `[0, 3]` that
+    controls when in the denoising cycle the purge is applied (earlier =
+    stronger reset).
+    -   `0` = earliest step (strongest change, most reactive)
+    -   `1` = early-mid
+    -   `2` = late-mid
+    -   `3` = latest step (subtle change, most continuity)
+-   **Where**: Use `SelfForcingEndlessGenerator.purge_cache(purge_strength)` or
+    the Socket.IO event `purge_cache` with a `purge_strength` payload.
+    Internally, see `_denoise_frame` in `self_forcing.py`.
+
+### Flicker Reduction via VAE Memory Handling
+
+-   **What**: During continuous generation, the VAE’s decoding cache is managed
+    to preserve consistency across blocks, minimizing periodic flicker described
+    in the blog.
+-   **Where**: VAE decode/cache handling in `_decode_block` within
+    `self_forcing.py`.
+
+### Real-Time Prompt Updates
+
+-   **What**: Change the prompt mid-generation; the new condition takes effect
+    on the next block. Combine with a purge for faster, cleaner transitions.
+-   **Where**: `SelfForcingEndlessGenerator.set_prompt(prompt)`; Socket.IO event
+    `new_prompt`.
+
+### Demo Refactor: Generator Class API
+
+-   **What**: The previous monolithic demo flow was refactored into a reusable
+    class.
+-   **Where**: `self_forcing.py` exposes `SelfForcingEndlessGenerator`, used by
+    `server.py`.
+-   **Key methods**:
+    -   `endless_generation_task(prompt, seed)`
+    -   `set_prompt(prompt)`
+    -   `purge_cache(purge_strength)`
+    -   `stop_generating()`
+-   **Streaming frames**: Frames are emitted via a queue and Socket.IO
+    (`frame_ready`) for immediate playback in the UI.
+
+For a deeper dive into motivations, trade-offs, and usage patterns (e.g., guided
+transitions vs. hard prompt switches, synchronization effects, and degradation
+recovery), see the blog post:
+[Self-Forcing: Making AI Video Generation Endless](https://derewah.dev/projects/self-forcing-endless).
 
 ## Training
 
