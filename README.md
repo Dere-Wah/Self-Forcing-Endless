@@ -139,6 +139,25 @@ transitions vs. hard prompt switches, synchronization effects, and degradation
 recovery), see the blog post:
 [Self-Forcing: Making AI Video Generation Endless](https://derewah.dev/projects/self-forcing-endless).
 
+<picture>
+  <source
+    media="(prefers-color-scheme: dark)"
+    srcset="
+      https://api.star-history.com/svg?repos=Dere-Wah/Self-Forcing-Endless&type=Date&theme=dark
+    "
+  />
+  <source
+    media="(prefers-color-scheme: light)"
+    srcset="
+      https://api.star-history.com/svg?repos=Dere-Wah/Self-Forcing-Endless&type=Date
+    "
+  />
+  <img
+    alt="Star History Chart"
+    src="https://api.star-history.com/svg?repos=Dere-Wah/Self-Forcing-Endless&type=Date"
+  />
+</picture>
+
 ## Training
 
 ### Download text prompts and ODE initialized checkpoint
